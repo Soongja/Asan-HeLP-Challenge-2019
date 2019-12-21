@@ -1,0 +1,74 @@
+# DO NOT FIX
+TRAIN_DIR: '/data/train'
+TEST_DIR: '/data/test'
+OUTPUT_DIR: '/data/output'
+VOLUME_DIR: '/data/volume'
+
+# START FROM HERE
+PREPROCESSED_DIR: '/data/volume/preprocessed'
+PREPROCESSED_TEST_DIR: '/data/volume/preprocessed_test'
+CHECKPOINT_DIR: /data/volume/checkpoints
+LOG_DIR: '/data/volume/logs'
+TRAIN_DF: '/data/volume/train.csv'
+FOLD_DF: '/data/volume/fold.csv'
+
+## LOCAL
+#TRAIN_DIR: '../../data/train'
+#TEST_DIR: '../../data/test'
+#OUTPUT_DIR: '../../data/output'
+#VOLUME_DIR: '../../data/volume'
+#
+## START FROM HERE
+#PREPROCESSED_DIR: '../../data/volume/preprocessed'
+#PREPROCESSED_TEST_DIR: '../../data/volume/preprocessed_test'
+#CHECKPOINT_DIR: ../../data/volume/hello/checkpoints
+#LOG_DIR: '../../data/volume/hello/logs'
+#TRAIN_DF: '../../data/volume/train.csv'
+#FOLD_DF: '../../data/volume/fold.csv'
+
+####################################
+
+MEMO: 'base'
+
+N_SPLITS: 6
+N_FOLD: 0
+SAMPLER: ''
+LABEL_SMOOTHING: 0
+
+PARALLEL: False
+DEBUG: False
+PRINT_EVERY: 10
+
+TRAIN:
+  NUM_EPOCHS: 1
+  BATCH_SIZE: 4
+  NUM_WORKERS: 2
+
+EVAL:
+  BATCH_SIZE: 8
+  NUM_WORKERS: 2
+
+DATA:
+  IMG_H: 256
+  IMG_W: 256
+
+MODEL:
+  ARCHITECTURE: 'Unet'
+  ENCODER: 'resnet18'
+  IN_CHANNELS: 3
+
+LOSS:
+  NAME: 'bce'
+  FINETUNE_EPOCH: 5
+  FINETUNE_LOSS: 'binary_lovasz_loss'
+
+OPTIMIZER:
+  NAME: 'radam'
+  LR: 0.001
+  PARAMS:
+
+SCHEDULER:
+  NAME: 'multi_step'
+  PARAMS:
+    milestones: [5,15]
+    gamma: 0.1
