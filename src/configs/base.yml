@@ -1,34 +1,27 @@
 # DO NOT FIX
-TRAIN_DIR: '/data/train'
-TEST_DIR: '/data/test'
-OUTPUT_DIR: '/data/output'
-VOLUME_DIR: '/data/volume'
+TRAIN_DIR: '../../data/train'
+TEST_DIR: '../../data/test'
+OUTPUT_DIR: '../../data/output'
+VOLUME_DIR: '../../data/volume'
+
+# directories below are saved under this directory. Change to sejun!
+SUB_DIR: ../../data/volume/seungjae
 
 # START FROM HERE
-PREPROCESSED_DIR: '/data/volume/preprocessed'
-PREPROCESSED_TEST_DIR: '/data/volume/preprocessed_test'
-CHECKPOINT_DIR: /data/volume/checkpoints
-LOG_DIR: '/data/volume/logs'
-TRAIN_DF: '/data/volume/train.csv'
-FOLD_DF: '/data/volume/fold.csv'
+PREPROCESSED_DIR: 'preprocessed_256_256'
+PREPROCESSED_TEST_DIR: 'preprocessed_test_256_256'
+TRAIN_DF: 'train_256_256.csv'
+FOLD_DF: '6fold_0.csv'
+CHECKPOINT_DIR: 'checkpoints/base'
 
-## LOCAL
-#TRAIN_DIR: '../../data/train'
-#TEST_DIR: '../../data/test'
-#OUTPUT_DIR: '../../data/output'
-#VOLUME_DIR: '../../data/volume'
-#
-## START FROM HERE
-#PREPROCESSED_DIR: '../../data/volume/preprocessed'
-#PREPROCESSED_TEST_DIR: '../../data/volume/preprocessed_test'
-#CHECKPOINT_DIR: ../../data/volume/hello/checkpoints
-#LOG_DIR: '../../data/volume/hello/logs'
-#TRAIN_DF: '../../data/volume/train.csv'
-#FOLD_DF: '../../data/volume/fold.csv'
+LOG_DIR: 'seungjae_base'
 
 ####################################
-
 MEMO: 'base'
+####################################
+
+PREPROCESS: False
+EDA: False
 
 N_SPLITS: 6
 N_FOLD: 0
@@ -40,13 +33,13 @@ DEBUG: False
 PRINT_EVERY: 10
 
 TRAIN:
-  NUM_EPOCHS: 1
-  BATCH_SIZE: 4
-  NUM_WORKERS: 2
+  NUM_EPOCHS: 10
+  BATCH_SIZE: 16
+  NUM_WORKERS: 4
 
 EVAL:
-  BATCH_SIZE: 8
-  NUM_WORKERS: 2
+  BATCH_SIZE: 32
+  NUM_WORKERS: 4
 
 DATA:
   IMG_H: 256
@@ -58,7 +51,7 @@ MODEL:
   IN_CHANNELS: 3
 
 LOSS:
-  NAME: 'bce'
+  NAME: 'binary_lovasz_loss'
   FINETUNE_EPOCH: 5
   FINETUNE_LOSS: 'binary_lovasz_loss'
 
@@ -70,5 +63,5 @@ OPTIMIZER:
 SCHEDULER:
   NAME: 'multi_step'
   PARAMS:
-    milestones: [5,15]
+    milestones: [5]
     gamma: 0.1
