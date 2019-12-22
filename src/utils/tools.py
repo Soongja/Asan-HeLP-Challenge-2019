@@ -1,9 +1,10 @@
 import os
 import sys
+import time
 
 
 def prepare_train_directories(config):
-    os.makedirs(config.CHECKPOINT_DIR, exist_ok=True)
+    os.makedirs(os.path.join(config.SUB_DIR, config.CHECKPOINT_DIR), exist_ok=True)
     # os.makedirs(config.LOG_DIR, exist_ok=True)
 
 
@@ -51,3 +52,13 @@ class Logger(object):
         # this handles the flush command by doing nothing.
         # you might want to specify some extra behavior here.
         pass
+
+
+def log_time(func):
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        func(*args, **kwargs)
+        ellapsed = time.time() - start
+        print(f'{func.__name__}() executed in %d hours %d minutes %d seconds'
+              % (ellapsed // 3600, (ellapsed % 3600) // 60, (ellapsed % 3600) % 60))
+    return wrapper
