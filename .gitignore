@@ -5,3 +5,4 @@ __pycache__/
 
 # custom
 test.tar.gz
+src/models/pretrained_weights/
