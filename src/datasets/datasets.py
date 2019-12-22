@@ -15,9 +15,9 @@ class CBDataset(Dataset):
         self.split = split
         self.transform = transform
 
-        self.train_df = pd.read_csv(self.config.TRAIN_DF, engine='python')
+        self.train_df = pd.read_csv(os.path.join(self.config.SUB_DIR, self.config.TRAIN_DF), engine='python')
 
-        fold_df = pd.read_csv(self.config.FOLD_DF, engine='python')
+        fold_df = pd.read_csv(os.path.join(self.config.SUB_DIR, self.config.FOLD_DF), engine='python')
         self.fold_df = fold_df.loc[fold_df['split'] == self.split].reset_index(drop=True)
 
         if self.config.DEBUG:
@@ -26,29 +26,24 @@ class CBDataset(Dataset):
 
         # if config.SAMPLER == 'stratified':
         #     self.labels = self.fold_df['ClassIds'].values
-        print('here after initializing Dataset')
 
     def __len__(self):
         return len(self.fold_df)
 
     def __getitem__(self, idx):
-        print('here in datasets.py getitem')
-        ImageId = self.fold_df["ImageId"][idx]
-        image = np.load(os.path.join(self.config.PREPROCESSED_DIR, ImageId + '.npz'))['img'] # grayscale
+        ImageId = str(self.fold_df["ImageId"][idx])
+        image = np.load(os.path.join(self.config.SUB_DIR, self.config.PREPROCESSED_DIR, f'{ImageId}.npz'))['img'] # grayscale
         if self.config.MODEL.IN_CHANNELS == 3:
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-        print('here after reading Image')
 
         mask = np.zeros((self.config.DATA.IMG_H, self.config.DATA.IMG_W, 8), dtype=np.uint8)
         EncodedPixels = self.train_df.loc[self.train_df['ImageId_ClassName'].apply(lambda x: x.split('_')[0]) == ImageId]['EncodedPixels'].values
-        print('here after reading rle')
 
         if len(EncodedPixels) > 0:
             for i in range(8):
                 if str(EncodedPixels[i]) != 'nan':
                     mask_c = rle2mask(EncodedPixels[i], shape=(self.config.DATA.IMG_H, self.config.DATA.IMG_W))
                     mask[:,:,i] = mask_c
-        print('here after making mask')
 
         # mask의 값은 0과 1!!!!
         # mask = mask * 255 # albu 넣을 때 1로 넣어도 되는지 아직 모름
@@ -68,7 +63,6 @@ class CBDataset(Dataset):
         image = (image - np.min(image)) / (np.max(image) - np.min(image))
         image = image * 2 - 1
 
-        print('here after normalizing')
         if self.config.MODEL.IN_CHANNELS == 3:
             image = torch.from_numpy(image).permute((2, 0, 1)).float()
         else:
@@ -77,7 +71,6 @@ class CBDataset(Dataset):
         # mask = mask / 255.
 
         mask = torch.from_numpy(mask).permute((2, 0, 1)).float()
-        print('here after making data to tensor')
 
         return image, mask
 
@@ -87,7 +80,7 @@ class CBDatasetTest(Dataset):
         self.config = config
         self.transform = transform
 
-        self.Images = os.listdir(self.config.PREPROCESSED_TEST_DIR)
+        self.Images = os.listdir(os.path.join(self.config.SUB_DIR, self.config.PREPROCESSED_TEST_DIR))
         self.ImageIds = [f.split('.')[0] for f in self.Images]
 
         print('Test Images:', len(self.Images))
@@ -97,7 +90,7 @@ class CBDatasetTest(Dataset):
 
     def __getitem__(self, idx):
         imageid = self.ImageIds[idx]
-        image = np.load(os.path.join(self.config.PREPROCESSED_TEST_DIR, Image))['img'] # grayscale
+        image = np.load(os.path.join(self.config.SUB_DIR, self.config.PREPROCESSED_TEST_DIR, Image))['img'] # grayscale
         if self.config.MODEL.IN_CHANNELS == 3:
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
 
