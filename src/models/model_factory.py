@@ -17,7 +17,7 @@ def get_model(config, pretrained):
 
     if model_architecture == 'Unet':
         model = Unet(model_encoder, encoder_weights=weights, classes=8,
-                     decoder_attention_type='scse', in_channels=in_channels)
+                     decoder_attention_type='scse', in_channels=in_channels, activation=None)
     # elif model_architecture == 'FPN' or model_architecture == 'PSPNet':
         # model = FPN(model_encoder, encoder_weights=model_pretrained, classes=4)
 

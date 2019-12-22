@@ -6,12 +6,10 @@ from .stratified_sampler import StratifiedSampler
 
 
 def get_dataloader(config, split, transform=None):
-    print('here in dataloader')
     if split == 'test':
         dataset = CBDatasetTest(config, transform=transform)
     else:
         dataset = CBDataset(config, split, transform=transform)
-    print('here after dataset')
 
     is_train = 'train' == split
     if is_train:
@@ -31,12 +29,9 @@ def get_dataloader(config, split, transform=None):
                                     shuffle=True,
                                     batch_size=batch_size,
                                     num_workers=config.TRAIN.NUM_WORKERS,
-                                    pin_memory=False)
+                                    pin_memory=True)
 
-        # print('here before PrefechDataLoader')
-        # dataloader = PrefetchDataLoader(dataloader, device=torch.device('cuda', 0))
-        # print('here after PrefechDataLoader')
-        print('prefetch dataloader deleted')
+        dataloader = PrefetchDataLoader(dataloader, device=torch.device('cuda', 0))
 
     else:
         dataloader = DataLoader(dataset,

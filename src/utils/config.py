@@ -90,7 +90,10 @@ def load(config_path, verbose=True):
             print('------------------------------ yml ------------------------------')
             for line in f:
                 line = line.replace('\n', '')
-                print(line)
+                try:
+                    print(line)
+                except:
+                    print('korean words not allowed')
             print('------------------------------ yml ------------------------------')
             print()
 

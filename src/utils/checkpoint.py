@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 
 def get_initial_checkpoint(config):
-    checkpoint_dir = config.CHECKPOINT_DIR
+    checkpoint_dir = os.path.join(config.SUB_DIR, config.CHECKPOINT_DIR)
     checkpoints = [checkpoint
                    for checkpoint in os.listdir(checkpoint_dir)
                    if checkpoint.startswith('epoch_') and checkpoint.endswith('.pth')]
@@ -49,7 +49,7 @@ def load_checkpoint(config, model, checkpoint):
 
 
 def save_checkpoint(config, model, epoch, score, loss, weights_dict=None, name=None):
-    checkpoint_dir = config.CHECKPOINT_DIR
+    checkpoint_dir = os.path.join(config.SUB_DIR, config.CHECKPOINT_DIR)
 
     if name:
         checkpoint_path = os.path.join(checkpoint_dir, '%s.pth' % name)

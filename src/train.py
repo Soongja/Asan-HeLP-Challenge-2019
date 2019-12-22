@@ -20,7 +20,7 @@ from datasets.dataloader import get_dataloader
 import utils.config
 import utils.checkpoint
 from utils.metrics import dice_coef
-from utils.tools import prepare_train_directories, AverageMeter
+from utils.tools import prepare_train_directories, AverageMeter, log_time
 from utils.experiments import LabelSmoother
 from preprocess import preprocess
 from eda import eda, eda_preprocessed_masks
@@ -96,7 +96,6 @@ def evaluate_single_epoch(config, model, dataloader, criterion, writer, epoch):
 
 
 def train_single_epoch(config, model, dataloader, criterion, optimizer, writer, epoch):
-    print('here in train_single_epoch')
     batch_time = AverageMeter()
     losses = AverageMeter()
     scores = AverageMeter()
@@ -108,21 +107,17 @@ def train_single_epoch(config, model, dataloader, criterion, optimizer, writer, 
     score_6 = AverageMeter()
     score_7 = AverageMeter()
     score_8 = AverageMeter()
-    print('here after AverageMeter')
 
     model.train()
 
-    print('here just before training loop')
     end = time.time()
     for i, (images, labels) in enumerate(dataloader):
-        print('here in train dataloader loop')
         optimizer.zero_grad()
 
         images = images.cuda()
         labels = labels.cuda()
 
         logits = model(images)
-        print('here in model logits')
 
         if config.LABEL_SMOOTHING:
             smoother = LabelSmoother(config.LABEL_SMOOTHING)
@@ -136,7 +131,6 @@ def train_single_epoch(config, model, dataloader, criterion, optimizer, writer, 
         optimizer.step()
 
         preds = F.sigmoid(logits)
-        print('here in model preds')
 
         score = dice_coef(preds, labels)
         score_1.update(score[0].item(), images.shape[0])
@@ -152,9 +146,8 @@ def train_single_epoch(config, model, dataloader, criterion, optimizer, writer, 
         batch_time.update(time.time() - end)
         end = time.time()
 
-        print('here in just before printing')
         if i % config.PRINT_EVERY == 0:
-            print(f'[{i:2d}/{len(dataloader):2d}] time: {batch_time.sum:.2f}, loss: {loss.item():.6f},'
+            print(f'[{epoch}/{config.TRAIN.NUM_EPOCHS}][{i:2d}/{len(dataloader):2d}] time: {batch_time.sum:.2f}, loss: {loss.item():.6f},'
                   f'score: {score.mean().item():.4f}'
                   f'[{score[0].item():.4f}, {score[1].item():.4f}, {score[2].item():.4f}, {score[3].item():.4f},'
                   f'{score[4].item():.4f}, {score[5].item():.4f}, {score[6].item():.4f}, {score[7].item():.4f}]'
@@ -207,6 +200,7 @@ def train(config, model, train_loader, test_loader, optimizer, scheduler, writer
             scheduler.step()
 
 
+@log_time
 def run(config):
     model = get_model(config, pretrained=True).cuda()
 
@@ -229,7 +223,7 @@ def run(config):
         step_count = len([i for i in milestones if i < last_epoch])
         optimizer.param_groups[0]['lr'] *= scheduler.state_dict()['gamma'] ** step_count
 
-    writer = SummaryWriter(config.LOG_DIR)
+    writer = SummaryWriter(os.path.join(config.VOLUME_DIR, 'logs', config.LOG_DIR))
 
     # train_loader = get_dataloader(config, 'train', transform=Albu())
     train_loader = get_dataloader(config, 'train')
@@ -260,9 +254,11 @@ def main():
     for yml in ymls:
         config = utils.config.load(yml)
 
-        eda(config)
-        preprocess(config)
-        eda_preprocessed_masks(config)
+        if config.PREPROCESS:
+            preprocess(config)
+        if config.EDA:
+            eda(config)
+            eda_preprocessed_masks(config)
 
         prepare_train_directories(config)
         run(config)

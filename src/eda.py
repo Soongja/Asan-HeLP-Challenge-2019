@@ -6,16 +6,18 @@ import SimpleITK as sitk
 
 import utils.config
 from utils.rle import rle2mask
+from utils.tools import log_time
 
 
 # ClassNames = ['Aortic Knob', 'Carina', 'DAO', 'LAA', 'Lt Lower CB', 'Pulmonary Conus', 'Rt Lower CB', 'Rt Upper CB']
+@log_time
 def eda(config):
 
     ImageIds = os.listdir(config.TRAIN_DIR)
     ClassNames = [f.split('.')[0].split('_')[-1] for f in os.listdir(os.path.join(config.TRAIN_DIR, ImageIds[0])) if f.endswith('.png')]
     ImageIds.sort()
     ClassNames.sort()
-    print(ClassNames)
+    # print(ClassNames)
 
     print('-----------Start image EDA-----------')
     print('ImageId    min    max   mean    med       shape')
@@ -39,18 +41,18 @@ def eda(config):
         m_ratios.append(m_ratio / len(ImageIds))
 
     print('   c0    c1    c2    c3    c4    c5    c6    c7')
-    print(f'{m_ratios[0]:.3f} {m_ratios[1]:.3f} {m_ratios[2]:.3f} {m_ratios[3]:.3f} {m_ratios[4]:.3f} {m_ratios[5]:.3f} {m_ratios[6]:.3f} {m_ratios[7]:.3f}')
+    print(f'{m_ratios[0]:.4f} {m_ratios[1]:.4f} {m_ratios[2]:.4f} {m_ratios[3]:.4f} {m_ratios[4]:.4f} {m_ratios[5]:.4f} {m_ratios[6]:.4f} {m_ratios[7]:.4f}')
 
 
+@log_time
 def eda_preprocessed_masks(config):
 
     ImageIds = os.listdir(config.TRAIN_DIR)
     ClassNames = [f.split('.')[0].split('_')[-1] for f in os.listdir(os.path.join(config.TRAIN_DIR, ImageIds[0])) if f.endswith('.png')]
     ImageIds.sort()
     ClassNames.sort()
-    print(ClassNames)
 
-    train_df = pd.read_csv(config.TRAIN_DF, engine='python')
+    train_df = pd.read_csv(os.path.join(config.SUB_DIR, config.TRAIN_DF), engine='python')
 
     print('-----------Start preprocessed mask EDA-----------')
     m_ratios = []
@@ -64,10 +66,10 @@ def eda_preprocessed_masks(config):
         m_ratios.append(m_ratio / len(rles))
 
     print('   c0    c1    c2    c3    c4    c5    c6    c7')
-    print(f'{m_ratios[0]:.3f} {m_ratios[1]:.3f} {m_ratios[2]:.3f} {m_ratios[3]:.3f} {m_ratios[4]:.3f} {m_ratios[5]:.3f} {m_ratios[6]:.3f} {m_ratios[7]:.3f}')
+    print(f'{m_ratios[0]:.4f} {m_ratios[1]:.4f} {m_ratios[2]:.4f} {m_ratios[3]:.4f} {m_ratios[4]:.4f} {m_ratios[5]:.4f} {m_ratios[6]:.4f} {m_ratios[7]:.4f}')
 
 
 if __name__ == '__main__':
     config = utils.config.load('configs/base.yml')
     eda(config)
-    eda_preprocssed_masks(config)
+    eda_preprocessed_masks(config)

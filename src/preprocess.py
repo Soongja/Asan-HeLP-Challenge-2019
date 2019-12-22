@@ -7,18 +7,18 @@ from sklearn.model_selection import KFold
 
 import utils.config
 from utils.rle import mask2rle
+from utils.tools import log_time
 
 
-# ClassNames = ['Aortic Knob', 'Carina', 'DAO', 'LAA', 'Lt Lower CB', 'Pulmonary Conus', 'Rt Lower CB', 'Rt Upper CB']
+@log_time
 def preprocess(config):
 
-    os.makedirs(config.PREPROCESSED_DIR, exist_ok=True)
+    os.makedirs(os.path.join(config.SUB_DIR, config.PREPROCESSED_DIR), exist_ok=True)
 
     ImageIds = os.listdir(config.TRAIN_DIR)
     ClassNames = [f.split('.')[0].split('_')[-1] for f in os.listdir(os.path.join(config.TRAIN_DIR, ImageIds[0])) if f.endswith('.png')]
     ImageIds.sort()
     ClassNames.sort()
-    print(ClassNames)
 
     # --------------------- image preprocessing ---------------------
     for ImageId in ImageIds:
@@ -28,7 +28,7 @@ def preprocess(config):
         # 순서 고민
         img = cv2.resize(img, (config.DATA.IMG_W, config.DATA.IMG_H), interpolation=cv2.INTER_CUBIC)
 
-        np.savez_compressed(os.path.join(config.PREPROCESSED_DIR, ImageId + '.npz'), img=img)
+        np.savez_compressed(os.path.join(config.SUB_DIR, config.PREPROCESSED_DIR, ImageId + '.npz'), img=img)
     print('[*] Image preprocessing done!')
 
     # --------------------- create train_df with rle masks ---------------------
@@ -46,7 +46,7 @@ def preprocess(config):
 
             train_df.loc[count] = [imageid_classname, rle]
             count += 1
-    train_df.to_csv(config.TRAIN_DF, index=False)
+    train_df.to_csv(os.path.join(config.SUB_DIR, config.TRAIN_DF), index=False)
     print('[*] train_df created!')
 
     # --------------------- create fold_df ---------------------
@@ -64,12 +64,13 @@ def preprocess(config):
             fold_df['split'].iloc[train_index] = 'train'
             fold_df['split'].iloc[val_index] = 'val'
 
-    fold_df.to_csv(config.FOLD_DF, index=False)
+    fold_df.to_csv(os.path.join(config.SUB_DIR, config.FOLD_DF), index=False)
     print('[*] fold_df created!')
 
 
+@log_time
 def preprocess_test(config):
-    os.makedirs(config.PREPROCESSED_TEST_DIR, exist_ok=True)
+    os.makedirs(os.path.join(config.SUB_DIR, config.PREPROCESSED_TEST_DIR), exist_ok=True)
 
     Images = os.listdir(config.TEST_DIR)
     ImageIds.sort()
@@ -81,7 +82,7 @@ def preprocess_test(config):
         # 순서 고민
         img = cv2.resize(img, (config.DATA.IMG_W, config.DATA.IMG_H), interpolation=cv2.INTER_CUBIC)
 
-        np.savez_compressed(os.path.join(config.PREPROCESSED_TEST_DIR, Image.split('.')[0] + '.npz'), img=img)
+        np.savez_compressed(os.path.join(config.SUB_DIR, config.PREPROCESSED_TEST_DIR, Image.split('.')[0] + '.npz'), img=img)
 
     print('[*] Test Image preprocessing done!')
 
