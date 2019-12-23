@@ -1,26 +1,19 @@
-# DO NOT FIX
-TRAIN_DIR: '../../data/train'
-TEST_DIR: '../../data/test'
-OUTPUT_DIR: '../../data/output'
-VOLUME_DIR: '../../data/volume'
-
 # directories below are saved under this directory. Change to sejun!
 SUB_DIR: ../../data/volume/seungjae
 
 # START FROM HERE
-PREPROCESSED_DIR: 'preprocessed_256_256'
-PREPROCESSED_TEST_DIR: 'preprocessed_test_256_256'
-TRAIN_DF: 'train_256_256.csv'
+PREPROCESSED_DIR: 'preprocessed_512_512'
+#PREPROCESSED_TEST_DIR: 'preprocessed_test_256_256'
+TRAIN_DF: 'train_512_512.csv'
 FOLD_DF: '6fold_0.csv'
-CHECKPOINT_DIR: 'checkpoints/base'
-
-LOG_DIR: 'seungjae_base'
+CHECKPOINT_DIR: 'checkpoints/base_512'
+LOG_DIR: 'seungjae_512'
 
 ####################################
 MEMO: 'base'
 ####################################
 
-PREPROCESS: False
+PREPROCESS: True
 EDA: False
 
 N_SPLITS: 6
@@ -33,7 +26,7 @@ DEBUG: False
 PRINT_EVERY: 10
 
 TRAIN:
-  NUM_EPOCHS: 10
+  NUM_EPOCHS: 100
   BATCH_SIZE: 16
   NUM_WORKERS: 4
 
@@ -42,8 +35,8 @@ EVAL:
   NUM_WORKERS: 4
 
 DATA:
-  IMG_H: 256
-  IMG_W: 256
+  IMG_H: 512
+  IMG_W: 512
 
 MODEL:
   ARCHITECTURE: 'Unet'
@@ -51,8 +44,8 @@ MODEL:
   IN_CHANNELS: 3
 
 LOSS:
-  NAME: 'binary_lovasz_loss'
-  FINETUNE_EPOCH: 5
+  NAME: 'bce_dice'
+  FINETUNE_EPOCH: 100
   FINETUNE_LOSS: 'binary_lovasz_loss'
 
 OPTIMIZER:
@@ -63,5 +56,5 @@ OPTIMIZER:
 SCHEDULER:
   NAME: 'multi_step'
   PARAMS:
-    milestones: [5]
+    milestones: [10,50]
     gamma: 0.1

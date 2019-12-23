@@ -8,21 +8,19 @@ import utils.config
 from utils.rle import rle2mask
 from utils.tools import log_time
 
+from global_params import TRAIN_DIR, CLASS_NAMES
 
-# ClassNames = ['Aortic Knob', 'Carina', 'DAO', 'LAA', 'Lt Lower CB', 'Pulmonary Conus', 'Rt Lower CB', 'Rt Upper CB']
+
 @log_time
 def eda(config):
 
-    ImageIds = os.listdir(config.TRAIN_DIR)
-    ClassNames = [f.split('.')[0].split('_')[-1] for f in os.listdir(os.path.join(config.TRAIN_DIR, ImageIds[0])) if f.endswith('.png')]
+    ImageIds = os.listdir(TRAIN_DIR)
     ImageIds.sort()
-    ClassNames.sort()
-    # print(ClassNames)
 
     print('-----------Start image EDA-----------')
     print('ImageId    min    max   mean    med       shape')
     for ImageId in ImageIds:
-        img = sitk.ReadImage(os.path.join(config.TRAIN_DIR, ImageId, ImageId + '.dcm'))
+        img = sitk.ReadImage(os.path.join(TRAIN_DIR, ImageId, ImageId + '.dcm'))
         img = sitk.GetArrayFromImage(img).astype(np.uint16).squeeze()
         h, w = img.shape
 
@@ -31,11 +29,11 @@ def eda(config):
 
     print('-----------Start raw mask EDA-----------')
     m_ratios = []
-    for ClassName in ClassNames:
+    for ClassName in CLASS_NAMES:
         m_ratio = 0
         for ImageId in ImageIds:
             imageid_classname = ImageId + '_' + ClassName
-            mask = cv2.imread(os.path.join(config.TRAIN_DIR, ImageId, imageid_classname + '.png'), 0)
+            mask = cv2.imread(os.path.join(TRAIN_DIR, ImageId, imageid_classname + '.png'), 0)
             mask = mask / 255.
             m_ratio += (np.sum(mask) / mask.size)
         m_ratios.append(m_ratio / len(ImageIds))
@@ -47,16 +45,14 @@ def eda(config):
 @log_time
 def eda_preprocessed_masks(config):
 
-    ImageIds = os.listdir(config.TRAIN_DIR)
-    ClassNames = [f.split('.')[0].split('_')[-1] for f in os.listdir(os.path.join(config.TRAIN_DIR, ImageIds[0])) if f.endswith('.png')]
+    ImageIds = os.listdir(TRAIN_DIR)
     ImageIds.sort()
-    ClassNames.sort()
 
     train_df = pd.read_csv(os.path.join(config.SUB_DIR, config.TRAIN_DF), engine='python')
 
     print('-----------Start preprocessed mask EDA-----------')
     m_ratios = []
-    for ClassName in ClassNames:
+    for ClassName in CLASS_NAMES:
         m_ratio = 0
         rles = train_df.loc[train_df['ImageId_ClassName'].apply(lambda x: x.split('_')[1]) == ClassName]['EncodedPixels'].values
         for rle in rles:

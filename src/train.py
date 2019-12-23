@@ -16,17 +16,16 @@ from factory.schedulers import get_scheduler
 from factory.optimizers import get_optimizer
 from factory.transforms import Albu
 from datasets.dataloader import get_dataloader
+from preprocess import preprocess
+from eda import eda, eda_preprocessed_masks
 
 import utils.config
 import utils.checkpoint
 from utils.metrics import dice_coef
 from utils.tools import prepare_train_directories, AverageMeter, log_time
 from utils.experiments import LabelSmoother
-from preprocess import preprocess
-from eda import eda, eda_preprocessed_masks
 
-import yaml
-from easydict import EasyDict as edict
+from global_params import VOLUME_DIR
 
 
 def evaluate_single_epoch(config, model, dataloader, criterion, writer, epoch):
@@ -74,7 +73,7 @@ def evaluate_single_epoch(config, model, dataloader, criterion, writer, epoch):
             if i % config.PRINT_EVERY == 0:
                 print(f'[{i:2d}/{len(dataloader):2d}] time: {batch_time.sum:.2f}, loss: {loss.item():.6f},'
                       f'score: {score.mean().item():.4f}'
-                      f'[{score[0].item():.4f}, {score[1].item():.4f}, {score[2].item():.4f}, {score[3].item():.4f},'
+                      f'[{score[0].item():.4f}, {score[1].item():.4f}, {score[2].item():.4f}, {score[3].item():.4f}, '
                       f'{score[4].item():.4f}, {score[5].item():.4f}, {score[6].item():.4f}, {score[7].item():.4f}]')
 
             del images, labels, logits, preds
@@ -149,7 +148,7 @@ def train_single_epoch(config, model, dataloader, criterion, optimizer, writer, 
         if i % config.PRINT_EVERY == 0:
             print(f'[{epoch}/{config.TRAIN.NUM_EPOCHS}][{i:2d}/{len(dataloader):2d}] time: {batch_time.sum:.2f}, loss: {loss.item():.6f},'
                   f'score: {score.mean().item():.4f}'
-                  f'[{score[0].item():.4f}, {score[1].item():.4f}, {score[2].item():.4f}, {score[3].item():.4f},'
+                  f'[{score[0].item():.4f}, {score[1].item():.4f}, {score[2].item():.4f}, {score[3].item():.4f}, '
                   f'{score[4].item():.4f}, {score[5].item():.4f}, {score[6].item():.4f}, {score[7].item():.4f}]'
                   f'lr: {optimizer.param_groups[0]["lr"]:.6f}')
 
@@ -223,7 +222,7 @@ def run(config):
         step_count = len([i for i in milestones if i < last_epoch])
         optimizer.param_groups[0]['lr'] *= scheduler.state_dict()['gamma'] ** step_count
 
-    writer = SummaryWriter(os.path.join(config.VOLUME_DIR, 'logs', config.LOG_DIR))
+    writer = SummaryWriter(os.path.join(VOLUME_DIR, 'logs', config.LOG_DIR))
 
     # train_loader = get_dataloader(config, 'train', transform=Albu())
     train_loader = get_dataloader(config, 'train')

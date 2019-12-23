@@ -9,20 +9,20 @@ import utils.config
 from utils.rle import mask2rle
 from utils.tools import log_time
 
+from global_params import TRAIN_DIR, CLASS_NAMES
+
 
 @log_time
 def preprocess(config):
 
     os.makedirs(os.path.join(config.SUB_DIR, config.PREPROCESSED_DIR), exist_ok=True)
 
-    ImageIds = os.listdir(config.TRAIN_DIR)
-    ClassNames = [f.split('.')[0].split('_')[-1] for f in os.listdir(os.path.join(config.TRAIN_DIR, ImageIds[0])) if f.endswith('.png')]
+    ImageIds = os.listdir(TRAIN_DIR)
     ImageIds.sort()
-    ClassNames.sort()
 
     # --------------------- image preprocessing ---------------------
     for ImageId in ImageIds:
-        img = sitk.ReadImage(os.path.join(config.TRAIN_DIR, ImageId, ImageId + '.dcm'))
+        img = sitk.ReadImage(os.path.join(TRAIN_DIR, ImageId, ImageId + '.dcm'))
         img = sitk.GetArrayFromImage(img).astype(np.uint16).squeeze()
 
         # 순서 고민
@@ -35,12 +35,12 @@ def preprocess(config):
     count = 0
     train_df = pd.DataFrame(columns=['ImageId_ClassName', 'EncodedPixels'])
     for ImageId in ImageIds:
-        for ClassName in ClassNames:
+        for ClassName in CLASS_NAMES:
             imageid_classname = ImageId + '_' + ClassName
-            mask = cv2.imread(os.path.join(config.TRAIN_DIR, ImageId, imageid_classname + '.png'), 0)
+            mask = cv2.imread(os.path.join(TRAIN_DIR, ImageId, imageid_classname + '.png'), 0)
 
             mask = cv2.resize(mask, (config.DATA.IMG_W, config.DATA.IMG_H))
-            _, mask = cv2.threshold(mask, 127, 255, 0)
+            mask = cv2.threshold(mask, 127, 255, 0)[1]
 
             rle = mask2rle(mask)
 
@@ -60,7 +60,7 @@ def preprocess(config):
 
     for fold, (train_index, val_index) in enumerate(kf.split(x)):
         if fold == config.N_FOLD:
-            print(fold, len(train_index), len(val_index))
+            # print(fold, len(train_index), len(val_index))
             fold_df['split'].iloc[train_index] = 'train'
             fold_df['split'].iloc[val_index] = 'val'
 
