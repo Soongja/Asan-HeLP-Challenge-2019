@@ -5,8 +5,10 @@ import numpy as np
 import torch
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset
+import SimpleITK as sitk
 
 from utils.rle import rle2mask
+from global_params import TEST_DIR
 
 
 class CBDataset(Dataset):
@@ -36,17 +38,14 @@ class CBDataset(Dataset):
         if self.config.MODEL.IN_CHANNELS == 3:
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
 
-        mask = np.zeros((self.config.DATA.IMG_H, self.config.DATA.IMG_W, 8), dtype=np.uint8)
+        mask = np.zeros((8, self.config.DATA.IMG_H, self.config.DATA.IMG_W), dtype=np.uint8)
         EncodedPixels = self.train_df.loc[self.train_df['ImageId_ClassName'].apply(lambda x: x.split('_')[0]) == ImageId]['EncodedPixels'].values
 
         if len(EncodedPixels) > 0:
             for i in range(8):
                 if str(EncodedPixels[i]) != 'nan':
                     mask_c = rle2mask(EncodedPixels[i], shape=(self.config.DATA.IMG_H, self.config.DATA.IMG_W))
-                    mask[:,:,i] = mask_c
-
-        # mask의 값은 0과 1!!!!
-        # mask = mask * 255 # albu 넣을 때 1로 넣어도 되는지 아직 모름
+                    mask[i] = mask_c
 
         if self.transform is not None:
             image, mask = self.transform(image, mask)
@@ -68,29 +67,29 @@ class CBDataset(Dataset):
         else:
             image = torch.from_numpy(image).unsqueeze(0).float()
 
-        # mask = mask / 255.
-
-        mask = torch.from_numpy(mask).permute((2, 0, 1)).float()
+        mask = torch.from_numpy(mask).float()
 
         return image, mask
 
 
 class CBDatasetTest(Dataset):
-    def __init__(self, config, transform=None):
+    def __init__(self, config, ImageIds, transform=None):
         self.config = config
+        self.ImageIds = ImageIds
         self.transform = transform
 
-        self.Images = os.listdir(os.path.join(self.config.SUB_DIR, self.config.PREPROCESSED_TEST_DIR))
-        self.ImageIds = [f.split('.')[0] for f in self.Images]
-
-        print('Test Images:', len(self.Images))
+        print('Test Images:', len(self.ImageIds))
 
     def __len__(self):
-        return len(self.Images)
+        return len(self.ImageIds)
 
     def __getitem__(self, idx):
-        imageid = self.ImageIds[idx]
-        image = np.load(os.path.join(self.config.SUB_DIR, self.config.PREPROCESSED_TEST_DIR, Image))['img'] # grayscale
+        ImageId = self.ImageIds[idx]
+        image = sitk.ReadImage(os.path.join(TEST_DIR, f'{ImageId}.dcm'))
+        image = sitk.GetArrayFromImage(image).astype(np.uint16).squeeze()
+
+        image = cv2.resize(image, (self.config.DATA.IMG_W, self.config.DATA.IMG_H), interpolation=cv2.INTER_CUBIC)
+
         if self.config.MODEL.IN_CHANNELS == 3:
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
 
@@ -114,4 +113,4 @@ class CBDatasetTest(Dataset):
         else:
             image = torch.from_numpy(image).unsqueeze(0).float()
 
-        return imageid, image
+        return image

@@ -5,11 +5,20 @@ from .datasets import CBDataset, CBDatasetTest
 from .stratified_sampler import StratifiedSampler
 
 
+def get_test_dataloader(config, ImageIds, transform=None):
+    dataset = CBDatasetTest(config, ImageIds, transform=transform)
+
+    dataloader = DataLoader(dataset,
+                            shuffle=False,
+                            batch_size=config.EVAL.BATCH_SIZE,
+                            num_workers=config.EVAL.NUM_WORKERS,
+                            pin_memory=True)
+
+    return dataloader
+
+
 def get_dataloader(config, split, transform=None):
-    if split == 'test':
-        dataset = CBDatasetTest(config, transform=transform)
-    else:
-        dataset = CBDataset(config, split, transform=transform)
+    dataset = CBDataset(config, split, transform=transform)
 
     is_train = 'train' == split
     if is_train:
