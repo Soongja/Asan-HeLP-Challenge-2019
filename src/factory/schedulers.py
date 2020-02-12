@@ -33,9 +33,24 @@ def cosine(optimizer, last_epoch, T_max=50, eta_min=0.00001, **_):
                                            last_epoch=last_epoch)
 
 
+def one_cycle(optimizer, last_epoch, **_):
+    return lr_scheduler.OneCycleLR(optimizer, max_lr=0.0003, total_steps=None, epochs=60, steps_per_epoch=76,
+                                    pct_start=0.3, anneal_strategy='cos',
+                                    cycle_momentum=True, base_momentum=0.85, max_momentum=0.95,
+                                    div_factor=1.0, final_div_factor=1000.0, last_epoch=last_epoch)
+
+
+def one_cycle_double(optimizer, last_epoch, **_):
+    return lr_scheduler.OneCycleLR(optimizer, max_lr=[0.00003,0.0003], total_steps=None, epochs=80, steps_per_epoch=76,
+                                    pct_start=0.2, anneal_strategy='cos',
+                                    cycle_momentum=True, base_momentum=0.85, max_momentum=0.95,
+                                    div_factor=1.0, final_div_factor=1000.0, last_epoch=last_epoch)
+
+
 def get_scheduler(config, optimizer, last_epoch):
     print('scheduler name:', config.SCHEDULER.NAME)
     f = globals().get(config.SCHEDULER.NAME)
+
     if config.SCHEDULER.PARAMS is None:
         return f(optimizer, last_epoch)
     else:

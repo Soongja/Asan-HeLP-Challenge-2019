@@ -2,46 +2,48 @@
 SUB_DIR: ../../data/volume/seungjae
 
 # START FROM HERE
-PREPROCESSED_DIR: 'preprocessed_512_512'
-#PREPROCESSED_TEST_DIR: 'preprocessed_test_256_256'
-TRAIN_DF: 'train_512_512.csv'
+PREPROCESSED_DIR: 'preprocessed_1024_1024_raw'
+TRAIN_DF: 'train_1024_1024.csv'
 FOLD_DF: '6fold_0.csv'
-CHECKPOINT_DIR: 'checkpoints/base_512'
-LOG_DIR: 'seungjae_512'
+
+CHECKPOINT_DIR: 'checkpoints/1024_cut8000_shift_bright_FPN_aug_stronger_12bit_14bit_10000'
+LOG_DIR: 'seungjae_1024_cut8000_shift_bright_FPN_aug_stronger_12bit_14bit_10000'
 
 ####################################
-MEMO: 'base'
+# 1024x1024 FPN se_resnext101 shift(0.9 0.3 0.3) bright(0.9 contrast0.15 brightness0.15,true)
 ####################################
 
-PREPROCESS: True
 EDA: False
-
+PREPROCESS: False
+DILATION: 0
 N_SPLITS: 6
 N_FOLD: 0
+
 SAMPLER: ''
-LABEL_SMOOTHING: 0
+LABEL_SMOOTHING:
 
 PARALLEL: False
 DEBUG: False
-PRINT_EVERY: 10
+PRINT_EVERY: 50
 
 TRAIN:
-  NUM_EPOCHS: 100
-  BATCH_SIZE: 16
+  NUM_EPOCHS: 50
+  BATCH_SIZE: 4
   NUM_WORKERS: 4
 
 EVAL:
-  BATCH_SIZE: 32
+  BATCH_SIZE: 8
   NUM_WORKERS: 4
 
 DATA:
-  IMG_H: 512
-  IMG_W: 512
+  IMG_H: 1024
+  IMG_W: 1024
 
 MODEL:
-  ARCHITECTURE: 'Unet'
-  ENCODER: 'resnet18'
+  ARCHITECTURE: 'FPN'
+  ENCODER: 'se_resnext101_32x4d'
   IN_CHANNELS: 3
+  CHANGE_ACTIVATION: False
 
 LOSS:
   NAME: 'bce_dice'
@@ -52,9 +54,10 @@ OPTIMIZER:
   NAME: 'radam'
   LR: 0.001
   PARAMS:
+#    weight_decay: 0.0001
 
 SCHEDULER:
   NAME: 'multi_step'
   PARAMS:
-    milestones: [10,50]
+    milestones: [30]
     gamma: 0.1

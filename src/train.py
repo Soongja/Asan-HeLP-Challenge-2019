@@ -1,4 +1,6 @@
 import os
+import cv2
+import shutil
 import random
 import time
 import math
@@ -17,11 +19,11 @@ from factory.optimizers import get_optimizer
 from factory.transforms import Albu
 from datasets.dataloader import get_dataloader
 from preprocess import preprocess
-from eda import eda, eda_preprocessed_masks
+from eda import eda, eda_preprocessed_masks, eda_test
 
 import utils.config
 import utils.checkpoint
-from utils.metrics import dice_coef
+from utils.metrics import dice_coef, dice_coef_numpy
 from utils.tools import prepare_train_directories, AverageMeter, log_time
 from utils.experiments import LabelSmoother
 
@@ -40,6 +42,7 @@ def evaluate_single_epoch(config, model, dataloader, criterion, writer, epoch):
     score_6 = AverageMeter()
     score_7 = AverageMeter()
     score_8 = AverageMeter()
+    tfpn_total = np.zeros((8, 4), np.int32)
 
     model.eval()
 
@@ -56,7 +59,16 @@ def evaluate_single_epoch(config, model, dataloader, criterion, writer, epoch):
 
             preds = F.sigmoid(logits)
 
-            score = dice_coef(preds, labels)
+            # added
+            # preds = preds.detach().cpu().numpy()
+            # preds = np.where(preds > 0.5, 1, 0).astype(np.uint8)
+            # kernel = np.ones((3,3), np.uint8)
+            # for b in range(preds.shape[0]):
+            #     for c in range(preds.shape[1]):
+            #         preds[b][c] = cv2.erode(preds[b][c], kernel, iterations=1)
+            # labels = labels.detach().cpu().numpy()
+
+            score, tfpn = dice_coef(preds, labels)
             score_1.update(score[0].item(), images.shape[0])
             score_2.update(score[1].item(), images.shape[0])
             score_3.update(score[2].item(), images.shape[0])
@@ -66,18 +78,22 @@ def evaluate_single_epoch(config, model, dataloader, criterion, writer, epoch):
             score_7.update(score[6].item(), images.shape[0])
             score_8.update(score[7].item(), images.shape[0])
             scores.update(score.mean().item(), images.shape[0])
+            tfpn_total = tfpn_total + tfpn
 
             batch_time.update(time.time() - end)
             end = time.time()
 
-            if i % config.PRINT_EVERY == 0:
-                print(f'[{i:2d}/{len(dataloader):2d}] time: {batch_time.sum:.2f}, loss: {loss.item():.6f},'
+            if i % 10 == 0:
+                print(f'[{epoch}/{config.TRAIN.NUM_EPOCHS}][{i:2d}/{len(dataloader):2d}] time: {batch_time.sum:.2f}, loss: {loss.item():.6f},'
                       f'score: {score.mean().item():.4f}'
                       f'[{score[0].item():.4f}, {score[1].item():.4f}, {score[2].item():.4f}, {score[3].item():.4f}, '
-                      f'{score[4].item():.4f}, {score[5].item():.4f}, {score[6].item():.4f}, {score[7].item():.4f}]')
+                      f'{score[4].item():.4f}, {score[5].item():.4f}, {score[6].item():.4f}, {score[7].item():.4f}]'
+                      )
 
             del images, labels, logits, preds
             torch.cuda.empty_cache()
+
+    print(tfpn_total)
 
     writer.add_scalar('val/loss', losses.avg, epoch)
     writer.add_scalar('val/score', scores.avg, epoch)
@@ -94,7 +110,7 @@ def evaluate_single_epoch(config, model, dataloader, criterion, writer, epoch):
     return scores.avg, losses.avg
 
 
-def train_single_epoch(config, model, dataloader, criterion, optimizer, writer, epoch):
+def train_single_epoch(config, model, dataloader, criterion, optimizer, scheduler, writer, epoch):
     batch_time = AverageMeter()
     losses = AverageMeter()
     scores = AverageMeter()
@@ -119,6 +135,7 @@ def train_single_epoch(config, model, dataloader, criterion, optimizer, writer, 
         logits = model(images)
 
         if config.LABEL_SMOOTHING:
+            print('label smoothed')
             smoother = LabelSmoother(config.LABEL_SMOOTHING)
             loss = criterion(logits, smoother(labels))
         else:
@@ -131,7 +148,7 @@ def train_single_epoch(config, model, dataloader, criterion, optimizer, writer, 
 
         preds = F.sigmoid(logits)
 
-        score = dice_coef(preds, labels)
+        score, _ = dice_coef(preds, labels)
         score_1.update(score[0].item(), images.shape[0])
         score_2.update(score[1].item(), images.shape[0])
         score_3.update(score[2].item(), images.shape[0])
@@ -150,12 +167,18 @@ def train_single_epoch(config, model, dataloader, criterion, optimizer, writer, 
                   f'score: {score.mean().item():.4f}'
                   f'[{score[0].item():.4f}, {score[1].item():.4f}, {score[2].item():.4f}, {score[3].item():.4f}, '
                   f'{score[4].item():.4f}, {score[5].item():.4f}, {score[6].item():.4f}, {score[7].item():.4f}]'
-                  f'lr: {optimizer.param_groups[0]["lr"]:.6f}')
+                  f'lr: {optimizer.param_groups[0]["lr"]}')
+                  # f'lr: {optimizer.param_groups[0]["lr"]} / {optimizer.param_groups[1]["lr"]}')
 
         del images, labels, logits, preds
         torch.cuda.empty_cache()
 
+        if config.SCHEDULER.NAME == 'one_cycle':
+            scheduler.step()
+
     writer.add_scalar('train/lr', optimizer.param_groups[0]['lr'], epoch)
+    # writer.add_scalar('train/enc_lr', optimizer.param_groups[0]['lr'], epoch)
+    # writer.add_scalar('train/dec_lr', optimizer.param_groups[1]['lr'], epoch)
     writer.add_scalar('train/loss', losses.avg, epoch)
     writer.add_scalar('train/score', scores.avg, epoch)
     writer.add_scalar('train/score_1', score_1.avg, epoch)
@@ -180,7 +203,7 @@ def train(config, model, train_loader, test_loader, optimizer, scheduler, writer
         else:
             criterion = get_loss(config.LOSS.FINETUNE_LOSS)
 
-        train_single_epoch(config, model, train_loader, criterion, optimizer, writer, epoch)
+        train_single_epoch(config, model, train_loader, criterion, optimizer, scheduler, writer, epoch)
 
         test_score, test_loss = evaluate_single_epoch(config, model, test_loader, criterion, writer, epoch)
 
@@ -193,17 +216,18 @@ def train(config, model, train_loader, test_loader, optimizer, scheduler, writer
 
         # utils.checkpoint.save_checkpoint(config, model, epoch, test_score, test_loss)
 
-        if config.SCHEDULER.NAME == 'reduce_lr_on_plateau':
-            scheduler.step(test_score)
-        else:
+        if config.SCHEDULER.NAME != 'one_cycle':
             scheduler.step()
 
 
 @log_time
 def run(config):
     model = get_model(config, pretrained=True).cuda()
+    # model_params = [{'params': model.encoder.parameters(), 'lr': config.OPTIMIZER.ENCODER_LR},
+    #                 {'params': model.decoder.parameters(), 'lr': config.OPTIMIZER.DECODER_LR}]
 
     optimizer = get_optimizer(config, model.parameters())
+    # optimizer = get_optimizer(config, model_params)
 
     checkpoint = utils.checkpoint.get_initial_checkpoint(config)
     if checkpoint is not None:
@@ -214,6 +238,8 @@ def run(config):
     print('last epoch:{} score:{:.4f} loss:{:.4f}'.format(last_epoch, score, loss))
 
     optimizer.param_groups[0]['initial_lr'] = config.OPTIMIZER.LR
+    # optimizer.param_groups[0]['initial_lr'] = config.OPTIMIZER.ENCODER_INITIAL_LR
+    # optimizer.param_groups[1]['initial_lr'] = config.OPTIMIZER.DECODER_INITIAL_LR
 
     scheduler = get_scheduler(config, optimizer, last_epoch)
 
@@ -221,11 +247,12 @@ def run(config):
         milestones = scheduler.state_dict()['milestones']
         step_count = len([i for i in milestones if i < last_epoch])
         optimizer.param_groups[0]['lr'] *= scheduler.state_dict()['gamma'] ** step_count
+        # optimizer.param_groups[0]['lr'] *= scheduler.state_dict()['gamma'] ** step_count
+        # optimizer.param_groups[1]['lr'] *= scheduler.state_dict()['gamma'] ** step_count
 
     writer = SummaryWriter(os.path.join(VOLUME_DIR, 'logs', config.LOG_DIR))
 
-    # train_loader = get_dataloader(config, 'train', transform=Albu())
-    train_loader = get_dataloader(config, 'train')
+    train_loader = get_dataloader(config, 'train', transform=Albu())
     val_loader = get_dataloader(config, 'val')
 
     train(config, model, train_loader, val_loader, optimizer, scheduler, writer, last_epoch+1, score, loss)
@@ -245,19 +272,22 @@ def seed_everything():
 def main():
     import warnings
     warnings.filterwarnings("ignore")
+    # os.system("df -h")
 
     print('start training.')
     seed_everything()
 
     ymls = ['configs/base.yml']
+    # ymls = ['configs/dil_base.yml', 'configs/dil_base2.yml']
     for yml in ymls:
         config = utils.config.load(yml)
 
+        if config.EDA:
+            eda()
+            # eda_test()
+            # eda_preprocessed_masks(config)
         if config.PREPROCESS:
             preprocess(config)
-        if config.EDA:
-            eda(config)
-            eda_preprocessed_masks(config)
 
         prepare_train_directories(config)
         run(config)
@@ -266,4 +296,5 @@ def main():
 
 
 if __name__ == '__main__':
+    # print('inference only')
     main()

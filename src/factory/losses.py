@@ -229,6 +229,8 @@ def binary_focal_loss(gamma=2):
 
 
 def bce():
+    # pos_weight = torch.cuda.FloatTensor([99, 99, 99, 99, 99, 99, 99, 99]).reshape(1, 8, 1, 1)
+    # pos_weight = torch.cuda.FloatTensor([0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8]).reshape(1, 8, 1, 1)
     return nn.BCEWithLogitsLoss()
 
 
@@ -251,6 +253,27 @@ def bce_dice(bce_weight=0.6):
 
     return func
 
+
+def bce_lovasz(bce_weight=0.6):
+    def func(input, target):
+        bce_loss = bce()
+        lovasz_loss = binary_lovasz_loss()
+
+        loss = bce_weight * bce_loss(input, target) + (1-bce_weight) * lovasz_loss(input, target)
+        return loss
+
+    return func
+
+
+def focal_dice(focal_weight=0.6):
+    def func(input, target):
+        focal_loss = binary_focal_loss()
+        dice_loss = binary_dice_loss()
+
+        loss = focal_weight * focal_loss(input, target) + (1-focal_weight) * dice_loss(input, target)
+        return loss
+
+    return func
 
 ########################################################################################################################
 # categorical losses (for multiclass problem)

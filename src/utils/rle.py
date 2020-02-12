@@ -13,7 +13,6 @@ def mask2rle(img):
     return ' '.join(str(x) for x in runs)
 
 
-# shape 세로, 가로 순임.
 def rle2mask(mask_rle, shape):
     '''
     mask_rle: run-length as string formated (start length)

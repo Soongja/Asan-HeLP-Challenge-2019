@@ -24,14 +24,14 @@ def get_dataloader(config, split, transform=None):
     if is_train:
         batch_size = config.TRAIN.BATCH_SIZE
 
-        if config.SAMPLER == 'stratified':
+        if config.SAMPLER == 'stratified':  # not used
             steps = len(dataset) // batch_size
 
             sampler = StratifiedSampler(dataset.labels)
 
             dataloader = FixedSizeDataLoader(dataset, steps=steps, batch_size=batch_size,
                                              num_workers=config.TRAIN.NUM_WORKERS,
-                                             drop_last=True, sampler=sampler)
+                                             drop_last=False, sampler=sampler)
 
         else:
             dataloader = DataLoader(dataset,
