@@ -13,6 +13,8 @@ RUN pip install pandas
 RUN pip install pretrainedmodels
 RUN pip install efficientnet_pytorch
 RUN pip install scikit-learn
+RUN pip install pydicom
+RUN pip install scikit-image
 
 ENV SRC_DIR /src
 COPY src $SRC_DIR
